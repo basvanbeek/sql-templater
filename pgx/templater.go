@@ -1,4 +1,4 @@
-package sql
+package pgx
 
 import (
 	"bytes"
