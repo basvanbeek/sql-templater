@@ -1,0 +1,136 @@
+version: "2"
+linters:
+  default: none
+  enable:
+    - asciicheck
+    - bodyclose
+    - copyloopvar
+    - dogsled
+    - errcheck
+    - exhaustive
+    - funlen
+    - gochecknoinits
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - goprintffuncname
+    - gosec
+    - govet
+    - ineffassign
+    - lll
+    - misspell
+    - noctx
+    - nolintlint
+    - revive
+    - rowserrcheck
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
+  # don't enable:
+  # - golint
+  # - dupl
+  # - scopelint (deprecated by exportloopref)
+  # - maligned (deprecated by govet fieldalignment)
+  # - goimports (deprecated by gofmt)
+  # - interfacer (deprecated)
+  # - gomnd
+  # - depguard
+  # - gochecknoglobals
+  # - godox
+  # - goerr113
+  # - nestif
+  # - prealloc
+  # - testpackage
+  # - wsl
+  # - nakedret
+  # - whitespace
+  # - varcheck (deprecated by unused)
+  # - structcheck (deprecated by unused)
+  # - deadcode (deprecated by unused)
+  settings:
+    dupl:
+      threshold: 400
+    exhaustive:
+      default-signifies-exhaustive: false
+    funlen:
+      lines: 500
+      statements: 100
+    gocognit:
+      min-complexity: 50
+    goconst:
+      min-len: 10
+      min-occurrences: 10
+    gocritic:
+      disabled-checks:
+        - dupImport
+        - ifElseChain
+        - octalLiteral
+        - whyNoLint
+        - wrapperFunc
+        - sloppyReassign
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - style
+    gocyclo:
+      min-complexity: 30
+    govet:
+      disable:
+        - fieldalignment
+      enable-all: true
+      settings:
+        printf:
+          funcs:
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Infof
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
+    lll:
+      line-length: 140
+    misspell:
+      locale: US
+    nolintlint:
+      require-explanation: false
+      require-specific: false
+      allow-unused: false
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - mnd
+        path: _test\.go
+      - linters:
+          - gocritic
+        text: 'unnecessaryDefer:'
+      - linters:
+          - revive
+        text: 'unexported-return:'
+    paths:
+      - scratch
+      - tests
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/golangci/golangci-lint
+  exclusions:
+    generated: lax
+    paths:
+      - scratch
+      - tests
+      - third_party$
+      - builtin$
+      - examples$
