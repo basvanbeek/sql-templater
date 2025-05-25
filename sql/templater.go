@@ -12,7 +12,7 @@ import (
 	"github.com/basvanbeek/telemetry/scope"
 	"google.golang.org/protobuf/proto"
 
-	sql_templater "github.com/basvanbeek/sql-templater"
+	"github.com/basvanbeek/sql-templater"
 )
 
 var log = scope.Register("sql-templater", "messages from the SQL templating logic")
@@ -29,11 +29,11 @@ type TemplatedQuery struct {
 }
 
 func InitTemplate(name, tpl string) (*template.Template, error) {
-	if sql_templater.FuncMap == nil {
+	if sqltemplater.FuncMap == nil {
 		return nil, errors.New("function map is not initialized")
 	}
 
-	return template.New(name).Funcs(sql_templater.FuncMap.GetFuncMap()).Parse(tpl)
+	return template.New(name).Funcs(sqltemplater.FuncMap.GetFuncMap()).Parse(tpl)
 }
 
 func NewTemplatedQuery(

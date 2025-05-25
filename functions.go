@@ -1,4 +1,4 @@
-package sql_templater
+package sqltemplater
 
 import (
 	"errors"
