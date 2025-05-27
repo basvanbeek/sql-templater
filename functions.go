@@ -29,6 +29,7 @@ func newFuncMap() *funcMap {
 	// Add our default functions
 	fm["in"] = in
 	fm["positionalParam"] = positionalParam
+	fm["isSet"] = isSet
 
 	return &funcMap{fm: fm}
 }
@@ -50,7 +51,7 @@ func (f *funcMap) AddFunc(name string, fn interface{}) error {
 	// Check the number of return values
 	switch fnType.NumOut() {
 	case 1:
-		if fnType.Out(0).Kind() != reflect.String {
+		if fnType.Out(0).Kind() != reflect.String && fnType.Out(0).Kind() != reflect.Bool {
 			return errReturnTypeMismatch
 		}
 	case 2:
@@ -93,4 +94,32 @@ func positionalParam(counter *int) string {
 	}
 	*counter++
 	return "$" + strconv.Itoa(*counter)
+}
+
+func isSet(v any) bool {
+	if v == nil {
+		return false
+	}
+	switch v.(type) {
+	case *string:
+		return *(v.(*string)) != ""
+	case *int:
+		return *(v.(*int)) != 0
+	case *int32:
+		return *(v.(*int32)) != 0
+	case *int64:
+		return *(v.(*int64)) != 0
+	case *uint:
+		return *(v.(*uint)) != 0
+	case *uint32:
+		return *(v.(*uint32)) != 0
+	case *uint64:
+		return *(v.(*uint64)) != 0
+	case *float64:
+		return *(v.(*float64)) != 0
+	case *bool:
+		return *(v.(*bool))
+	default:
+		return false
+	}
 }
