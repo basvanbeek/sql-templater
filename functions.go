@@ -3,6 +3,7 @@ package sqltemplater
 import (
 	"errors"
 	"reflect"
+	"strconv"
 	"strings"
 	"text/template"
 )
@@ -27,6 +28,7 @@ func newFuncMap() *funcMap {
 
 	// Add our default functions
 	fm["in"] = in
+	fm["positionalParam"] = positionalParam
 
 	return &funcMap{fm: fm}
 }
@@ -83,4 +85,12 @@ func in(values interface{}) (string, error) {
 	default:
 		return " IN (" + strings.TrimSuffix(strings.Repeat("?,", count), ",") + ")", nil
 	}
+}
+
+func positionalParam(counter *int) string {
+	if counter == nil {
+		return "?"
+	}
+	*counter++
+	return "$" + strconv.Itoa(*counter)
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"text/template"
 	"time"
 
@@ -22,18 +23,73 @@ type ParamHandler interface {
 	Params() []interface{}
 }
 
+type option struct {
+	name        string
+	oldSchema   string
+	schemaParam string
+	funcMap     template.FuncMap
+}
+
+type Option func(o *option) error
+
 type TemplatedQuery struct {
 	tpl *template.Template
 	db  *pgxpool.Pool
 	obj ParamHandler
 }
 
-func InitTemplate(name, tpl string) (*template.Template, error) {
+func WithName(name string) Option {
+	return func(o *option) error {
+		if name == "" {
+			return errors.New("name cannot be empty")
+		}
+		o.name = name
+		return nil
+	}
+}
+
+func WithDynamicSchema(schemaPlaceholder, schemaParam string) Option {
+	return func(o *option) error {
+		if schemaPlaceholder == "" || schemaParam == "" {
+			return errors.New("schema placeholder and parameter cannot be empty")
+		}
+		o.oldSchema = schemaPlaceholder
+		o.schemaParam = schemaParam
+		return nil
+	}
+}
+
+func WithFuncMap(funcMap template.FuncMap) Option {
+	return func(o *option) error {
+		if funcMap == nil {
+			return errors.New("function map cannot be nil")
+		}
+		o.funcMap = funcMap
+		return nil
+	}
+}
+
+func InitTemplate(tpl string, opts ...Option) (*template.Template, error) {
+	o := &option{
+		name:        "tpl",
+		oldSchema:   "",
+		schemaParam: "",
+		funcMap:     sqltemplater.FuncMap.GetFuncMap(),
+	}
+	for _, opt := range opts {
+		if err := opt(o); err != nil {
+			return nil, fmt.Errorf("error applying option: %w", err)
+		}
+	}
 	if sqltemplater.FuncMap == nil {
 		return nil, errors.New("function map is not initialized")
 	}
 
-	return template.New(name).Funcs(sqltemplater.FuncMap.GetFuncMap()).Parse(tpl)
+	if o.oldSchema != "" {
+		tpl = strings.ReplaceAll(tpl, `"`+o.oldSchema+`"`, `"{{ .`+o.schemaParam+` }}"`)
+	}
+
+	return template.New(o.name).Funcs(o.funcMap).Parse(tpl)
 }
 
 func NewTemplatedQuery(
@@ -45,6 +101,7 @@ func NewTemplatedQuery(
 func (t *TemplatedQuery) GetQuery(
 	ctx context.Context, sortOrder string,
 ) (rows pgx.Rows, err error) {
+	params := t.obj.Params()
 	var buf bytes.Buffer
 	l := log.Context(ctx).With("sort_order", sortOrder)
 	if err = t.tpl.Execute(&buf, t.obj); err != nil {
@@ -62,14 +119,15 @@ func (t *TemplatedQuery) GetQuery(
 	startTime := time.Now()
 	l.Debug("query details",
 		"query", query,
-		"params", fmt.Sprintf("%+v", t.obj.Params()))
-	rows, err = t.db.Query(ctx, query, t.obj.Params()...)
+		"params", fmt.Sprintf("%+v", params))
+	rows, err = t.db.Query(ctx, query, params...)
 	l.Debug("get query done",
 		"duration", time.Since(startTime).String())
 	return
 }
 
 func (t *TemplatedQuery) GetCount(ctx context.Context) (count int, err error) {
+	params := t.obj.Params()
 	var buf bytes.Buffer
 	l := log.Context(ctx)
 	if err = t.tpl.Execute(&buf, t.obj); err != nil {
@@ -85,8 +143,8 @@ func (t *TemplatedQuery) GetCount(ctx context.Context) (count int, err error) {
 	startTime := time.Now()
 	l.Debug("query details",
 		"query", query,
-		"params", fmt.Sprintf("%+v", t.obj.Params()))
-	err = t.db.QueryRow(ctx, query, t.obj.Params()...).Scan(&count)
+		"params", fmt.Sprintf("%+v", params))
+	err = t.db.QueryRow(ctx, query, params...).Scan(&count)
 	l.Debug("count query done",
 		"count", count,
 		"duration", time.Since(startTime).String())
@@ -96,6 +154,7 @@ func (t *TemplatedQuery) GetCount(ctx context.Context) (count int, err error) {
 func (t *TemplatedQuery) GetPage(
 	ctx context.Context, limit, offset int, sortOrder string,
 ) (rows pgx.Rows, err error) {
+	params := t.obj.Params()
 	var buf bytes.Buffer
 	l := log.Context(ctx).With(
 		"limit", limit, "offset", offset, "sort_order", sortOrder,
@@ -119,8 +178,8 @@ func (t *TemplatedQuery) GetPage(
 	startTime := time.Now()
 	l.Debug("query details",
 		"query", query,
-		"params", fmt.Sprintf("%+v", t.obj.Params()))
-	rows, err = t.db.Query(ctx, query, t.obj.Params()...)
+		"params", fmt.Sprintf("%+v", params))
+	rows, err = t.db.Query(ctx, query, params...)
 	l.Debug("page query done",
 		"duration", time.Since(startTime).String())
 	return
