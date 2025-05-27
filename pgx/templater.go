@@ -98,6 +98,28 @@ func NewTemplatedQuery(
 	return &TemplatedQuery{tpl: tpl, db: db, obj: obj}
 }
 
+func (t *TemplatedQuery) Execute(ctx context.Context) (rows pgx.Rows, err error) {
+	params := t.obj.Params()
+	var buf bytes.Buffer
+	if err = t.tpl.Execute(&buf, t.obj); err != nil {
+		err = fmt.Errorf(
+			"unable to execute template %s with object %+v: %w",
+			t.tpl.Name(), t.obj, err)
+		log.Context(ctx).Error("Execute failed", err,
+			"object", t.tpl.DefinedTemplates())
+		return nil, err
+	}
+	query := buf.String()
+	startTime := time.Now()
+	log.Debug("query details",
+		"query", query,
+		"params", fmt.Sprintf("%+v", params))
+	rows, err = t.db.Query(ctx, query, params...)
+	log.Debug("get query done",
+		"duration", time.Since(startTime).String())
+	return
+}
+
 func (t *TemplatedQuery) GetQuery(
 	ctx context.Context, sortOrder string,
 ) (rows pgx.Rows, err error) {
