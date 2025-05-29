@@ -28,6 +28,7 @@ func newFuncMap() *funcMap {
 
 	// Add our default functions
 	fm["in"] = in
+	fm["inPositional"] = inPositional
 	fm["positionalParam"] = positionalParam
 	fm["isSet"] = isSet
 
@@ -85,6 +86,27 @@ func in(values interface{}) (string, error) {
 		return " = ?", nil
 	default:
 		return " IN (" + strings.TrimSuffix(strings.Repeat("?,", count), ",") + ")", nil
+	}
+}
+
+func inPositional(values interface{}, counter *int) (string, error) {
+	var count int
+	//nolint:exhaustive // we only need to test for two types of types ;)
+	switch reflect.TypeOf(values).Kind() {
+	case reflect.Slice:
+		count = reflect.ValueOf(values).Len()
+	case reflect.Array:
+		count = reflect.ValueOf(values).Len()
+	default:
+		count = 1
+	}
+	switch count {
+	case 0:
+		return "", errors.New("we must have at least one item for a like clause value")
+	case 1:
+		return " = " + positionalParam(counter), nil
+	default:
+		return " IN (" + strings.TrimSuffix(strings.Repeat(positionalParam(counter)+",", count), ",") + ")", nil
 	}
 }
 
